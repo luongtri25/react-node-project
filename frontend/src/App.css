@@ -19,8 +19,23 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.topbar-inner {
+  gap: 12px;
+}
+
+.topbar-auth {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-auth .user-email {
+  color: #e8eefc;
+  font-weight: 600;
 }
 
 .navbar {
@@ -191,6 +206,7 @@
   max-width: 1140px;
   margin: 0 auto;
   padding: 24px 16px 8px;
+  scroll-margin-top: 50px; /* tránh bị header che khi anchor */
 }
 
 .section-header {
@@ -348,6 +364,24 @@
   border-color: #0e1a36;
 }
 
+.auth-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.auth-toggle .filter-chip {
+  flex: 1;
+  text-align: center;
+}
+
+.auth-toggle .filter-chip.active {
+  background: var(--primary);
+  color: #0f172a;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(255, 212, 71, 0.35);
+}
+
 .deal-banner {
   background: linear-gradient(90deg, #0e1a36, #1c2d5f);
   color: #ffffff;
@@ -445,6 +479,27 @@
   text-align: center;
 }
 
+.toast {
+  position: fixed;
+  top: 90px;
+  right: 16px;
+  background: #0e1a36;
+  color: #ffffff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  min-width: 200px;
+  font-weight: 700;
+}
+
+.toast.success {
+  background: #1f8b4c;
+}
+
+.toast.error {
+  background: #c0392b;
+}
 @media (max-width: 768px) {
   .deal-banner {
     grid-template-columns: 1fr;

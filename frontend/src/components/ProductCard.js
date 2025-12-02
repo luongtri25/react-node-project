@@ -1,23 +1,26 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 function formatPrice(v) {
+  if (typeof v !== "number") return "Liên hệ";
   return `${v.toLocaleString("vi-VN")} ₫`;
 }
 
-const ProductCard = ({ product }) => {
-  // Ưu tiên image (fallbackProducts), nếu không có thì lấy images[0] từ DB
+const ProductCard = ({ product, onAddToCart }) => {
+  const id = product._id || product.id;
   const imageSrc =
     product.image ||
     (Array.isArray(product.images) && product.images.length > 0
       ? product.images[0]
-      : undefined);
+      : undefined) ||
+    "https://placehold.co/400x300?text=Pokemon";
 
   return (
     <div className="product-card">
       <img src={imageSrc} alt={product.name} />
       <div className="product-body">
         <div className="chip" style={{ width: "fit-content" }}>
-          {product.category}
+          {product.category || "Pokemon"}
         </div>
         <h4 className="product-title">{product.name}</h4>
         <div className="product-meta">
@@ -26,12 +29,19 @@ const ProductCard = ({ product }) => {
             ⭐ 4.9
           </span>
         </div>
-        <div className="product-price">
-          {product.price ? formatPrice(product.price) : "Liên hệ"}
-        </div>
+        <div className="product-price">{formatPrice(product.price)}</div>
         <div className="product-actions">
-          <button className="ghost-btn">Xem chi tiết</button>
-          <button className="primary-btn">Đặt ngay</button>
+          <Link className="ghost-btn" to={`/product/${id}`}>
+            Xem chi tiết
+          </Link>
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={() => onAddToCart && onAddToCart(product)}
+            disabled={!onAddToCart}
+          >
+            Thêm giỏ
+          </button>
         </div>
       </div>
     </div>

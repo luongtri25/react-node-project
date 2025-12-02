@@ -1,5 +1,6 @@
 // src/pages/HomePage.js
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -12,13 +13,20 @@ const benefits = [
   { title: "Hỗ trợ 1-1", desc: "Chat ngay để được tư vấn mẫu và kích thước", icon: "💬" },
 ];
 
-function HomePage() {
+function HomePage({ auth, logout }) {
+  const location = useLocation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState({ name: "", phone: "", product: "", note: "" });
-  const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error' | null
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (text, type = "info") => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 2000);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +52,16 @@ function HomePage() {
     };
   }, []);
 
+  const apiFetch = (url, options = {}) =>
+    fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+        ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
+      },
+    });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.phone) {
@@ -65,6 +83,26 @@ function HomePage() {
     }
   };
 
+  const handleAddToCart = async (product) => {
+    if (!auth?.token) {
+      showToast("Vui lòng đăng nhập để thêm vào giỏ.", "error");
+      return;
+    }
+    try {
+      const res = await apiFetch("http://localhost:5000/api/cart", {
+        method: "POST",
+        body: JSON.stringify({
+          productId: product._id || product.id,
+          quantity: 1,
+        }),
+      });
+      if (!res.ok) throw new Error("Thêm giỏ thất bại");
+      showToast("Đã thêm vào giỏ", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
+
   const categories = useMemo(() => {
     const base = ["all"];
     products.forEach((p) => {
@@ -73,6 +111,16 @@ function HomePage() {
     return base;
   }, [products]);
 
+  // Scroll to hash (e.g., /#products) when page loads or hash changes
+  useEffect(() => {
+    if (location.hash) {
+      const target = document.querySelector(location.hash);
+      if (target) {
+        setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+      }
+    }
+  }, [location]);
+
   const filteredProducts =
     filter === "all"
       ? products
@@ -80,7 +128,8 @@ function HomePage() {
 
   return (
     <div className="page">
-      <Header />
+      <Header auth={auth} logout={logout} />
+      {toast && <div className={`toast ${toast.type}`}>{toast.text}</div>}
 
       <section id="hero" className="hero">
         <div className="hero-card">
@@ -185,7 +234,7 @@ function HomePage() {
 
         <div className="grid grid-4">
           {filteredProducts.map((p) => (
-            <ProductCard key={p._id || p.id} product={p} />
+            <ProductCard key={p._id || p.id} product={p} onAddToCart={handleAddToCart} />
           ))}
         </div>
       </section>
