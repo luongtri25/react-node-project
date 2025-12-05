@@ -20,6 +20,7 @@ router.post(
   auth,
   [
     body('productId').isMongoId(),
+    body('variantId').optional().isString(),
     body('quantity').optional().isInt({ min: 1 }).toInt(),
     body('attributes').optional().isObject()
   ],
@@ -28,24 +29,57 @@ router.post(
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-      const { productId, quantity = 1, attributes = {} } = req.body;
+      const { productId, quantity = 1, variantId, attributes = {} } = req.body;
       const product = await Product.findById(productId);
       if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      // pick variant (required if exists)
+      const variant =
+        (product.variants || []).find((v) => v.variantId === variantId) ||
+        (product.variants || [])[0];
+      if (!variant) return res.status(400).json({ error: 'Variant not found' });
+
+      const linePrice = typeof variant.price === 'number' ? variant.price : product.minPrice || 0;
+      const lineName = variant.sizeCm ? `${product.name} - ${variant.sizeCm}cm` : product.name;
+      const lineImage =
+        (variant.images && variant.images[0]) ||
+        product.thumbnail ||
+        (product.images && product.images[0]) ||
+        undefined;
 
       let cart = await Cart.findOne({ user: req.userId });
       if (!cart) cart = await Cart.create({ user: req.userId, items: [] });
 
-      const idx = cart.items.findIndex((i) => i.product.toString() === productId);
+      const idx = cart.items.findIndex(
+        (i) =>
+          i.product.toString() === productId &&
+          (i.attributes?.get('variantId') || i.attributes?.variantId) === (variant.variantId || '')
+      );
       if (idx >= 0) {
         cart.items[idx].quantity = quantity;
+        cart.items[idx].price = linePrice;
+        cart.items[idx].name = lineName;
+        cart.items[idx].image = lineImage;
+        cart.items[idx].attributes = {
+          ...Object.fromEntries(cart.items[idx].attributes || []),
+          ...attributes,
+          variantId: variant.variantId || '',
+          sizeCm: variant.sizeCm?.toString() || '',
+          sku: variant.sku || '',
+        };
       } else {
         cart.items.push({
           product: productId,
-          name: product.name,
-          price: product.price,
+          name: lineName,
+          price: linePrice,
           quantity,
-          image: product.images?.[0],
-          attributes
+          image: lineImage,
+          attributes: {
+            ...attributes,
+            variantId: variant.variantId || '',
+            sizeCm: variant.sizeCm?.toString() || '',
+            sku: variant.sku || '',
+          }
         });
       }
       await cart.save();

@@ -1,12 +1,43 @@
-import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const Header = ({ auth, logout }) => {
   const navigate = useNavigate();
+  const { pathname, hash } = useLocation();
+  const [activeSection, setActiveSection] = useState("#hero");
 
   const handleLogout = () => {
     if (logout) logout(navigate);
   };
+
+  const isHome = pathname === "/";
+  const isSection = (targetHash) =>
+    isHome && (activeSection === targetHash || (!hash && targetHash === "#hero"));
+  const activeClass = (cond) => (cond ? "active" : "");
+  const isCartPage = pathname.startsWith("/cart") || pathname.startsWith("/checkout");
+  const isOrdersPage = pathname.startsWith("/orders");
+
+  useEffect(() => {
+    if (!isHome) return;
+    const sections = ["#hero", "#categories", "#products", "#deals", "#about", "#contact", "#order"];
+    const handleScroll = () => {
+      let current = "#hero";
+      const offset = 140;
+      sections.forEach((id) => {
+        const el = document.querySelector(id);
+        if (el) {
+          const { top } = el.getBoundingClientRect();
+          if (top - offset <= 0) {
+            current = id;
+          }
+        }
+      });
+      setActiveSection(current);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHome]);
 
   return (
     <>
@@ -45,30 +76,32 @@ const Header = ({ auth, logout }) => {
             PokeShop3D
           </div>
           <div className="nav-links">
-            <a className="nav-link" href="/#hero">
+            <Link className={`nav-link ${activeClass(isHome)}`} to="/">
               Trang chủ
-            </a>
-            <a className="nav-link" href="/#categories">
+            </Link>
+            <a className={`nav-link ${activeClass(isSection("#categories"))}`} href="/#categories">
               Danh mục
             </a>
-            <a className="nav-link" href="/#products">
+            <a className={`nav-link ${activeClass(isSection("#products"))}`} href="/#products">
               Sản phẩm
             </a>
-            <a className="nav-link" href="/#deals">
+            <a className={`nav-link ${activeClass(isSection("#deals"))}`} href="/#deals">
               Ưu đãi
             </a>
-            <a className="nav-link" href="/#about">
+            <a className={`nav-link ${activeClass(isSection("#about"))}`} href="/#about">
               Giới thiệu
             </a>
-            <a className="nav-link" href="/#contact">
+            <a className={`nav-link ${activeClass(isSection("#contact"))}`} href="/#contact">
               Liên hệ
             </a>
-            <a className="cta-btn" href="/#order">
-              Đặt in nhanh
-            </a>
-            <Link className="nav-link" to="/cart">
+            <Link className={`nav-link ${activeClass(isCartPage)}`} to="/cart">
               Giỏ hàng
             </Link>
+            {auth?.token && (
+              <Link className={`nav-link ${activeClass(isOrdersPage)}`} to="/orders">
+                Lịch sử đơn
+              </Link>
+            )}
           </div>
         </div>
       </header>

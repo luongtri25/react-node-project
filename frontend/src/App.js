@@ -4,6 +4,8 @@ import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
 import ProductDetail from "./pages/ProductDetail";
 import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import OrdersPage from "./pages/OrdersPage";
 import { loadAuth, saveAuth, clearAuth } from "./auth";
 
 export default function App() {
@@ -42,6 +44,14 @@ export default function App() {
         <Route
           path="/cart"
           element={<CartPage auth={auth} logout={authActions.logout} />}
+        />
+        <Route
+          path="/checkout"
+          element={<CheckoutPage auth={auth} logout={authActions.logout} />}
+        />
+        <Route
+          path="/orders"
+          element={<OrdersPage auth={auth} logout={authActions.logout} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

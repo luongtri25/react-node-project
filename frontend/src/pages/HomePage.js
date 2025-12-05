@@ -1,4 +1,4 @@
-// src/pages/HomePage.js
+﻿// src/pages/HomePage.js
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "../App.css";
@@ -8,9 +8,9 @@ import ProductCard from "../components/ProductCard";
 
 const benefits = [
   { title: "Freeship từ 499k", desc: "Giao nhanh toàn quốc, cập nhật mã vận đơn", icon: "🚚" },
-  { title: "In theo yêu cầu", desc: "Nhận file bạn gửi, hỗ trợ chỉnh sửa và phối màu", icon: "🎨" },
+  { title: "In theo yêu cầu", desc: "Nhận file bạn gửi, hỗ trợ chỉnh sửa và phối màu", icon: "🖨️" },
   { title: "Đóng gói an toàn", desc: "Chống sốc, kèm hướng dẫn bảo quản", icon: "📦" },
-  { title: "Hỗ trợ 1-1", desc: "Chat ngay để được tư vấn mẫu và kích thước", icon: "💬" },
+  { title: "Hỗ trợ 1-1", desc: "Chat ngay được tư vấn mẫu và cách thức", icon: "💬" },
 ];
 
 function HomePage({ auth, logout }) {
@@ -62,38 +62,28 @@ function HomePage({ auth, logout }) {
       },
     });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.name || !form.phone) {
-      setSubmitStatus("error");
-      return;
-    }
-    try {
-      setSubmitStatus(null);
-      const res = await fetch("http://localhost:5000/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error("Request failed");
-      setSubmitStatus("success");
-      setForm({ name: "", phone: "", product: "", note: "" });
-    } catch (err) {
-      setSubmitStatus("error");
-    }
-  };
+  const handleSubmit = () => {};
 
   const handleAddToCart = async (product) => {
     if (!auth?.token) {
       showToast("Vui lòng đăng nhập để thêm vào giỏ.", "error");
       return;
     }
+    const variant = product.variants?.[0];
     try {
       const res = await apiFetch("http://localhost:5000/api/cart", {
         method: "POST",
         body: JSON.stringify({
           productId: product._id || product.id,
+          variantId: variant?.variantId,
           quantity: 1,
+          attributes: variant
+            ? {
+                variantId: variant.variantId,
+                sizeCm: variant.sizeCm?.toString() || "",
+                sku: variant.sku || "",
+              }
+            : {},
         }),
       });
       if (!res.ok) throw new Error("Thêm giỏ thất bại");
@@ -133,14 +123,14 @@ function HomePage({ auth, logout }) {
 
       <section id="hero" className="hero">
         <div className="hero-card">
-          <div className="pill">Pokémon Store · Mô hình 3D</div>
+          <div className="pill">Pokemon Store & Mô hình 3D</div>
           <h1>
-            Bắt trọn bộ Pokémon,
+            Bật trọn bộ Pokemon,
             <br />
-            in 3D sắc nét, giao nhanh.
+            in 3D sống động, giao nhanh.
           </h1>
           <p>
-            Hơn 1500 mẫu Pokémon, combo Pokéball, diorama LED. Đóng gói chống sốc, hỗ trợ phối màu
+            Hơn 1500 mẫu Pokemon, combo Pokeball, diorama LED. Đóng gói chống sốc, hỗ trợ phối màu
             theo yêu cầu.
           </p>
           <div className="hero-actions">
@@ -154,7 +144,7 @@ function HomePage({ auth, logout }) {
             </div>
             <div className="stat-box">
               <div className="value">1500+</div>
-              <div className="muted">Mẫu Pokémon</div>
+              <div className="muted">Mẫu Pokemon</div>
             </div>
             <div className="stat-box">
               <div className="value">24h</div>
@@ -176,7 +166,7 @@ function HomePage({ auth, logout }) {
         <div className="section-header">
           <div>
             <h3 className="section-title">Danh mục nổi bật</h3>
-            <p className="section-sub">Mô hình 3D · Legendary · Combo set · Phụ kiện Pokéball</p>
+            <p className="section-sub">Mô hình 3D • Legendary • Combo set • Phụ kiện Pokeball</p>
           </div>
           <a className="nav-link" href="#products">
             Xem tất cả →
@@ -185,12 +175,12 @@ function HomePage({ auth, logout }) {
         <div className="grid grid-4">
           <div className="category-card">
             <div className="chip">Mô hình 3D</div>
-            <h4>Figurine Pokémon</h4>
-            <p className="muted">Pikachu, Eevee, starter gen 1-9, phủ bóng mờ</p>
+            <h4>Figurine Pokemon</h4>
+            <p className="muted">Pikachu, Eevee, starter gen 1-9, phiên bản mới</p>
           </div>
           <div className="category-card">
             <div className="chip">Legendary</div>
-            <h4>Rồng/Huyền thoại</h4>
+            <h4>Rồng / Huyền thoại</h4>
             <p className="muted">Mewtwo, Rayquaza, trio chim, sơn metallic</p>
           </div>
           <div className="category-card">
@@ -200,7 +190,7 @@ function HomePage({ auth, logout }) {
           </div>
           <div className="category-card">
             <div className="chip">Phụ kiện</div>
-            <h4>Pokéball & Diorama</h4>
+            <h4>Pokeball & Diorama</h4>
             <p className="muted">Ball LED, đế mica, cảnh mini kèm đèn</p>
           </div>
         </div>
@@ -209,7 +199,7 @@ function HomePage({ auth, logout }) {
       <section id="products" className="section">
         <div className="section-header">
           <div>
-            <h3 className="section-title">Sản phẩm Pokémon</h3>
+            <h3 className="section-title">Sản phẩm Pokemon</h3>
             <p className="section-sub">Chọn nhanh theo danh mục hoặc xem tất cả</p>
           </div>
           <div className="filters">
@@ -242,15 +232,15 @@ function HomePage({ auth, logout }) {
       <section id="deals" className="section">
         <div className="deal-banner">
           <div>
-            <h3>Deal Pokémon cuối tuần</h3>
-            <p>Giảm 15% cho combo Pokéball + figurine, áp dụng tới Chủ nhật.</p>
+            <h3>Deal Pokemon cuối tuần</h3>
+            <p>Giảm 15% cho combo Pokeball + figurine, áp dụng tới Chủ nhật.</p>
             <div className="hero-actions">
               <button className="cta-btn">Nhận ưu đãi</button>
               <button className="secondary-btn">Xem chi tiết</button>
             </div>
           </div>
           <div className="alert-box" style={{ textAlign: "left" }}>
-            <strong>Bonus:</strong> Tặng kèm sticker pack Pokémon cho đơn từ 300k.
+            <strong>Bonus:</strong> Tặng kèm sticker pack Pokemon cho đơn từ 300k.
           </div>
         </div>
       </section>
@@ -272,57 +262,12 @@ function HomePage({ auth, logout }) {
         </div>
       </section>
 
-      <section id="order" className="section">
-        <div className="section-header">
-          <h3 className="section-title">Đặt hàng / Đặt in nhanh</h3>
-        </div>
-        <form className="newsletter" onSubmit={handleSubmit}>
-          <input
-            name="name"
-            placeholder="Tên của bạn"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <input
-            name="phone"
-            placeholder="Số điện thoại"
-            required
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-          <input
-            name="product"
-            placeholder="Tên sản phẩm / link mẫu in"
-            value={form.product}
-            onChange={(e) => setForm({ ...form, product: e.target.value })}
-          />
-          <textarea
-            name="note"
-            placeholder="Ghi chú kích thước, màu sắc"
-            value={form.note}
-            onChange={(e) => setForm({ ...form, note: e.target.value })}
-          />
-          <button type="submit">Gửi yêu cầu</button>
-          {submitStatus === "success" && (
-            <div className="alert-box" style={{ marginTop: 8 }}>
-              Đã gửi yêu cầu, chúng tôi sẽ liên hệ sớm!
-            </div>
-          )}
-          {submitStatus === "error" && (
-            <div className="alert-box" style={{ marginTop: 8 }}>
-              Gửi thất bại, vui lòng kiểm tra thông tin và thử lại.
-            </div>
-          )}
-        </form>
-      </section>
-
       <section id="about" className="section">
         <div className="section-header">
           <h3 className="section-title">Giới thiệu</h3>
         </div>
         <p className="muted">
-          PokeShop 3D chuyên mô hình Pokémon in 3D, Pokéball LED, diorama. Chất liệu PLA+ và resin,
+          PokeShop 3D chuyên mô hình Pokemon in 3D, Pokeball LED, diorama. Chất liệu PLA+ và resin,
           kiểm soát chi tiết sắc nét, đóng gói chống sốc và giao toàn quốc.
         </p>
       </section>
@@ -331,7 +276,7 @@ function HomePage({ auth, logout }) {
         <div className="section-header">
           <h3 className="section-title">Liên hệ</h3>
         </div>
-        <p>Hotline: 1900 0099 · Zalo/Facebook: nShop Pokémon · Email: support@pokeshop.vn</p>
+        <p>Hotline: 1900 0099 • Zalo/Facebook: nShop Pokemon • Email: support@pokeshop.vn</p>
         <div className="hero-actions">
           <a className="cta-btn" href="https://zalo.me/" target="_blank" rel="noreferrer">
             Chat Zalo
@@ -346,7 +291,7 @@ function HomePage({ auth, logout }) {
         <div className="newsletter">
           <div>
             <h4 className="section-title" style={{ fontSize: 20 }}>
-              Nhận tin Pokémon & ưu đãi
+              Nhận tin Pokemon & ưu đãi
             </h4>
             <p className="muted" style={{ margin: 0 }}>
               Giảm 10% cho đơn đầu tiên, cập nhật mẫu mới mỗi tuần.

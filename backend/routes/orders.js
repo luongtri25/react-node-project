@@ -16,6 +16,7 @@ const validateOrder = [
   body('items.*.productId')
     .isMongoId()
     .withMessage('productId invalid'),
+  body('items.*.variantId').optional().isString(),
   body('items.*.quantity')
     .optional()
     .isInt({ min: 1 })
@@ -32,6 +33,28 @@ router.post('/', auth, validateOrder, async (req, res, next) => {
 
     const { items, shipping = {}, payment = {}, note = '', shippingFee = 0 } = req.body;
 
+    // Normalize shipping address fields
+    const shippingAddress = {
+      fullName: shipping.address?.fullName || shipping.fullName || '',
+      phone: shipping.address?.phone || shipping.phone || '',
+      line1:
+        shipping.address?.line1 ||
+        shipping.addressLine ||
+        shipping.line1 ||
+        shipping.address ||
+        '',
+      city: shipping.address?.city || shipping.city || '',
+      province: shipping.address?.province || shipping.province || '',
+      postalCode: shipping.address?.postalCode || shipping.postalCode || '',
+      country: shipping.address?.country || shipping.country || '',
+    };
+
+    const shippingPayload = {
+      ...shipping,
+      address: shippingAddress,
+      status: shipping.status || 'pending',
+    };
+
     // Fetch product info to compute price on server
     const productIds = items.map((i) => i.productId);
     const products = await Product.find({ _id: { $in: productIds } });
@@ -44,15 +67,29 @@ router.post('/', auth, validateOrder, async (req, res, next) => {
       const product = map.get(i.productId);
       if (!product) return res.status(400).json({ error: `Product not found: ${i.productId}` });
       const quantity = i.quantity || 1;
-      const lineTotal = product.price * quantity;
+      const variant =
+        (product.variants || []).find((v) => v.variantId === i.variantId) ||
+        (product.variants || [])[0];
+      if (!variant) return res.status(400).json({ error: `Variant not found for product ${i.productId}` });
+
+      const price = typeof variant.price === 'number' ? variant.price : product.minPrice || 0;
+      const lineTotal = price * quantity;
       subtotal += lineTotal;
       orderItems.push({
         product: product._id,
-        name: product.name,
-        price: product.price,
+        name: variant.sizeCm ? `${product.name} - ${variant.sizeCm}cm` : product.name,
+        price,
         quantity,
-        image: product.images?.[0],
-        attributes: i.attributes || {},
+        image:
+          (variant.images && variant.images[0]) ||
+          product.thumbnail ||
+          (product.images && product.images[0]),
+        attributes: {
+          ...(i.attributes || {}),
+          variantId: variant.variantId || '',
+          sizeCm: variant.sizeCm?.toString() || '',
+          sku: variant.sku || '',
+        },
       });
     }
 
@@ -65,7 +102,7 @@ router.post('/', auth, validateOrder, async (req, res, next) => {
       shippingFee: shippingFee || 0,
       total,
       payment,
-      shipping,
+      shipping: shippingPayload,
       note,
       status: 'created',
     });

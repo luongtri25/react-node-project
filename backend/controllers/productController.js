@@ -1,6 +1,5 @@
 // controllers/productController.js
 const Product = require('../models/product');
-const mongoose = require('mongoose');
 const slugify = require('slugify'); // optional, npm i slugify
 
 // GET /products
@@ -14,17 +13,18 @@ exports.list = async (req, res, next) => {
     if (req.query.category) filter.category = req.query.category;
     if (req.query.search) filter.$text = { $search: req.query.search };
     if (req.query.priceMin || req.query.priceMax) {
-      filter.price = {};
-      if (req.query.priceMin) filter.price.$gte = Number(req.query.priceMin);
-      if (req.query.priceMax) filter.price.$lte = Number(req.query.priceMax);
+      filter.minPrice = {};
+      if (req.query.priceMin) filter.minPrice.$gte = Number(req.query.priceMin);
+      if (req.query.priceMax) filter.minPrice.$lte = Number(req.query.priceMax);
     }
 
     // sorting
     let sort = { createdAt: -1 };
     if (req.query.sort) {
-      if (req.query.sort === 'price_asc') sort = { price: 1 };
-      if (req.query.sort === 'price_desc') sort = { price: -1 };
+      if (req.query.sort === 'price_asc') sort = { minPrice: 1 };
+      if (req.query.sort === 'price_desc') sort = { minPrice: -1 };
       if (req.query.sort === 'rating_desc') sort = { rating: -1 };
+      if (req.query.sort === 'name_asc') sort = { name: 1 };
     }
 
     const [items, total] = await Promise.all([
@@ -61,7 +61,16 @@ exports.getById = async (req, res, next) => {
 // POST /products
 exports.create = async (req, res, next) => {
   try {
-    const { name, price, images = [], category, description = '', stock = 0 } = req.body;
+    const {
+      name,
+      category,
+      description = '',
+      pokemon = '',
+      variants = [],
+      images = [],
+      thumbnail = '',
+      tags = []
+    } = req.body;
 
     // create slug from name and ensure uniqueness fallback
     let slug = slugify(name, { lower: true, strict: true });
@@ -72,11 +81,13 @@ exports.create = async (req, res, next) => {
     const product = new Product({
       name,
       slug,
-      price,
-      images,
       category,
       description,
-      stock
+      pokemon,
+      variants,
+      images,
+      thumbnail,
+      tags
     });
 
     await product.save();
@@ -102,6 +113,9 @@ exports.update = async (req, res, next) => {
 
     const product = await Product.findByIdAndUpdate(id, payload, { new: true, runValidators: true });
     if (!product) return res.status(404).json({ error: 'Product not found' });
+
+    // ensure hooks run for min/max price
+    await product.save();
     res.json(product);
   } catch (err) {
     next(err);

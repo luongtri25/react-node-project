@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
@@ -8,18 +8,23 @@ export default function AuthPage({ auth, setAuth }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
+    setLoading(true);
+
     const endpoint =
       mode === "register"
         ? "http://localhost:5000/api/auth/register"
         : "http://localhost:5000/api/auth/login";
-    const payload = mode === "register"
-      ? { name: form.name, email: form.email, password: form.password }
-      : { email: form.email, password: form.password };
+
+    const payload =
+      mode === "register"
+        ? { name: form.name.trim(), email: form.email.trim(), password: form.password }
+        : { email: form.email.trim(), password: form.password };
 
     try {
       const res = await fetch(endpoint, {
@@ -27,35 +32,42 @@ export default function AuthPage({ auth, setAuth }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Auth failed");
+      if (!res.ok) throw new Error(data.error || data.message || "Xác thực thất bại");
+
       setAuth({ token: data.token, user: data.user });
       setMessage(mode === "login" ? "Đăng nhập thành công" : "Đăng ký thành công");
-      // redirect home sau 1s
-      setTimeout(() => navigate("/"), 800);
+
+      // redirect về trang chính (hoặc trang trước đó)
+      navigate("/");
     } catch (err) {
-      setMessage(err.message);
+      setMessage(err.message || "Có lỗi xảy ra");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="page">
-      <Header />
+      <Header auth={auth} />
       <section className="section">
         <div className="section-header">
           <h3 className="section-title">Đăng nhập / Đăng ký</h3>
         </div>
+
         <form
           className="newsletter"
           onSubmit={handleSubmit}
-          style={{ gridTemplateColumns: "1fr" }}
+          style={{ gridTemplateColumns: "1fr", gap: 12 }}
           autoComplete="off"
         >
-          <div className="auth-toggle">
+          <div className="auth-toggle" role="tablist" aria-label="Chọn chế độ">
             <button
               type="button"
               className={`filter-chip ${mode === "login" ? "active" : ""}`}
               onClick={() => setMode("login")}
+              aria-pressed={mode === "login"}
             >
               Đăng nhập
             </button>
@@ -63,10 +75,12 @@ export default function AuthPage({ auth, setAuth }) {
               type="button"
               className={`filter-chip ${mode === "register" ? "active" : ""}`}
               onClick={() => setMode("register")}
+              aria-pressed={mode === "register"}
             >
               Đăng ký
             </button>
           </div>
+
           {mode === "register" && (
             <input
               name="name"
@@ -76,6 +90,7 @@ export default function AuthPage({ auth, setAuth }) {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           )}
+
           <input
             name="email"
             type="email"
@@ -84,6 +99,7 @@ export default function AuthPage({ auth, setAuth }) {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
+
           <input
             name="password"
             type="password"
@@ -92,17 +108,26 @@ export default function AuthPage({ auth, setAuth }) {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
-          <button type="submit">{mode === "login" ? "Đăng nhập" : "Đăng ký"}</button>
+
+          <button type="submit" disabled={loading} className="primary-btn">
+            {loading ? (mode === "login" ? "Đang đăng nhập..." : "Đang đăng ký...") : mode === "login" ? "Đăng nhập" : "Đăng ký"}
+          </button>
+
           {auth?.user && (
             <div className="alert-box" style={{ marginTop: 8 }}>
               Đang đăng nhập: {auth.user.email} ({auth.user.role || "user"})
             </div>
           )}
+
           {message && (
             <div className="alert-box" style={{ marginTop: 8 }}>
               {message}
             </div>
           )}
+
+          <div style={{ marginTop: 6, fontSize: 13 }} className="muted">
+            Bằng việc đăng ký hoặc đăng nhập, bạn đồng ý với <a href="/terms">Điều khoản sử dụng</a> của chúng tôi.
+          </div>
         </form>
       </section>
       <Footer />
