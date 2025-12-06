@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
@@ -10,6 +10,13 @@ export default function AuthPage({ auth, setAuth }) {
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Nếu đã đăng nhập, điều hướng đúng theo role
+  useEffect(() => {
+    if (!auth?.user) return;
+    if (auth.user.role === "admin") navigate("/admin");
+    else navigate("/");
+  }, [auth, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,8 +46,12 @@ export default function AuthPage({ auth, setAuth }) {
       setAuth({ token: data.token, user: data.user });
       setMessage(mode === "login" ? "Đăng nhập thành công" : "Đăng ký thành công");
 
-      // redirect về trang chính (hoặc trang trước đó)
-      navigate("/");
+      // điều hướng theo role
+      if (mode === "login" && data?.user?.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setMessage(err.message || "Có lỗi xảy ra");
     } finally {
@@ -110,7 +121,13 @@ export default function AuthPage({ auth, setAuth }) {
           />
 
           <button type="submit" disabled={loading} className="primary-btn">
-            {loading ? (mode === "login" ? "Đang đăng nhập..." : "Đang đăng ký...") : mode === "login" ? "Đăng nhập" : "Đăng ký"}
+            {loading
+              ? mode === "login"
+                ? "Đang đăng nhập..."
+                : "Đang đăng ký..."
+              : mode === "login"
+              ? "Đăng nhập"
+              : "Đăng ký"}
           </button>
 
           {auth?.user && (
@@ -126,7 +143,8 @@ export default function AuthPage({ auth, setAuth }) {
           )}
 
           <div style={{ marginTop: 6, fontSize: 13 }} className="muted">
-            Bằng việc đăng ký hoặc đăng nhập, bạn đồng ý với <a href="/terms">Điều khoản sử dụng</a> của chúng tôi.
+            Bằng việc đăng ký hoặc đăng nhập, bạn đồng ý với{" "}
+            <a href="/terms">Điều khoản sử dụng</a> của chúng tôi.
           </div>
         </form>
       </section>

@@ -23,11 +23,11 @@ const Footer = () => {
         <div>
           <h5>Liên hệ</h5>
           <p style={{ color: "#c3cbe3" }}>
-            Hotline: 1900 0099
+            Hotline: 0388638853
             <br />
             Zalo/Facebook: nShop Pokémon
             <br />
-            Email: support@pokeshop.vn
+            Email: pinguyen023@gmail.com
           </p>
         </div>
       </div>

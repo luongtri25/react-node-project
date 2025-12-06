@@ -1,6 +1,6 @@
 // backend/routes/orders.js
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const Order = require('../models/order');
 const Product = require('../models/product');
 const Cart = require('../models/cart');
@@ -8,6 +8,7 @@ const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/admin');
 
 const router = express.Router();
+const ORDER_STATUSES = ['created', 'processing', 'completed', 'cancelled', 'refunded'];
 
 const validateOrder = [
   body('items')
@@ -133,5 +134,33 @@ router.get('/all', auth, adminOnly, async (req, res, next) => {
     next(err);
   }
 });
+
+// PATCH /orders/:id/status (admin) - update order status
+router.patch(
+  '/:id/status',
+  auth,
+  adminOnly,
+  [param('id').isMongoId(), body('status').isIn(ORDER_STATUSES)],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const { id } = req.params;
+      const { status } = req.body;
+
+      const order = await Order.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      );
+
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      return res.json(order);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;

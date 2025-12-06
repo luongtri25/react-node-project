@@ -3,6 +3,7 @@ const { body, param, validationResult } = require('express-validator');
 const Cart = require('../models/cart');
 const Product = require('../models/product');
 const auth = require('../middleware/auth');
+const adminOnly = require('../middleware/admin');
 
 const router = express.Router();
 
@@ -11,6 +12,18 @@ router.get('/', auth, async (req, res, next) => {
   try {
     const cart = await Cart.findOne({ user: req.userId }).populate('items.product', 'name price images');
     return res.json(cart || { user: req.userId, items: [] });
+  } catch (err) { next(err); }
+});
+
+// Lấy tất cả cart (admin)
+router.get('/all', auth, adminOnly, async (req, res, next) => {
+  try {
+    const carts = await Cart.find()
+      .populate('user', 'email name role')
+      .populate('items.product', 'name thumbnail images')
+      .sort({ updatedAt: -1 })
+      .limit(200);
+    return res.json(carts);
   } catch (err) { next(err); }
 });
 

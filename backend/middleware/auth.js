@@ -14,6 +14,7 @@ module.exports = (req, res, next) => {
     const payload = jwt.verify(token, JWT_SECRET);
     req.userId = payload.id;
     req.userEmail = payload.email;
+    req.userRole = payload.role; // keep role from token để downstream dùng (admin check, logging)
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid token' });

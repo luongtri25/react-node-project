@@ -6,6 +6,7 @@ import ProductDetail from "./pages/ProductDetail";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrdersPage from "./pages/OrdersPage";
+import AdminPage from "./pages/AdminPage";
 import { loadAuth, saveAuth, clearAuth } from "./auth";
 
 export default function App() {
@@ -52,6 +53,10 @@ export default function App() {
         <Route
           path="/orders"
           element={<OrdersPage auth={auth} logout={authActions.logout} />}
+        />
+        <Route
+          path="/admin"
+          element={<AdminPage auth={auth} logout={authActions.logout} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

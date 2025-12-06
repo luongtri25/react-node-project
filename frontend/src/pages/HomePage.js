@@ -281,7 +281,7 @@ function HomePage({ auth, logout }) {
           <a className="cta-btn" href="https://zalo.me/" target="_blank" rel="noreferrer">
             Chat Zalo
           </a>
-          <a className="secondary-btn" href="https://facebook.com/" target="_blank" rel="noreferrer">
+          <a className="secondary-btn" href="https://www.facebook.com/ri.to.39904/" target="_blank" rel="noreferrer">
             Facebook
           </a>
         </div>

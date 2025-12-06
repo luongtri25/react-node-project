@@ -3,12 +3,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
 
 const requestRoutes = require('./routes/requests');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
+const userRoutes = require('./routes/users');
 
 const app = express();
 
@@ -22,6 +24,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
+
+// Serve frontend build (optional, for deployment)
+const frontendPath = path.join(__dirname, '../frontend/build');
+app.use(express.static(frontendPath));
+app.get('*', (req, res) => {
+  // fallback for SPA routes
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
 // API test echo
 app.post('/api/echo', (req, res) => {

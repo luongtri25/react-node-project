@@ -1,5 +1,6 @@
+// src/pages/ProductDetail.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -11,11 +12,16 @@ function formatPrice(v) {
 
 export default function ProductDetail({ auth, logout }) {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(null);
+
+  // ✅ Nhận dữ liệu trước từ HomePage (truyền qua navigate)
+  const initialProduct = location.state?.product || null;
+
+  const [product, setProduct] = useState(initialProduct);
   const [variantId, setVariantId] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [activeType, setActiveType] = useState("thumbnail");
+  const [loading, setLoading] = useState(!initialProduct);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -24,11 +30,13 @@ export default function ProductDetail({ auth, logout }) {
     setTimeout(() => setToast(null), 2000);
   };
 
+  // ✅ Fetch lại 1 lần để update ngầm từ server
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       try {
-        setLoading(true);
+        if (!initialProduct) setLoading(true);
         const res = await fetch(`http://localhost:5000/api/products/${id}`);
         if (!res.ok) throw new Error(`Server error ${res.status}`);
         const data = await res.json();
@@ -39,30 +47,87 @@ export default function ProductDetail({ auth, logout }) {
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, initialProduct]);
 
-  const selectedVariant = useMemo(() => {
-    if (!product) return null;
-    const variants = product.variants || [];
-    if (!variants.length) return null;
-    return variants.find((v) => v.variantId === variantId) || variants[0];
-  }, [product, variantId]);
-
+  // ✅ Mặc định chọn variant đầu + thumbnail
   useEffect(() => {
     if (!product) return;
-    const variantImages = selectedVariant?.images || [];
-    const baseImages = product.images || [];
-    const nextImage = variantImages[0] || product.thumbnail || baseImages[0] || null;
-    setSelectedImage(nextImage);
-  }, [product, selectedVariant]);
 
+    const firstVariant = product.variants?.[0];
+    if (firstVariant) {
+      setVariantId(firstVariant.variantId);
+    }
+
+    setActiveType("thumbnail");
+  }, [product]);
+
+  // ✅ Variant đang chọn
+  const selectedVariant = useMemo(() => {
+    if (!product) return null;
+    return (
+      product.variants?.find((v) => v.variantId === variantId) ||
+      product.variants?.[0]
+    );
+  }, [product, variantId]);
+
+  // ✅ Map size → image
+  const sizeImageMap = useMemo(() => {
+    const map = {};
+    product?.variants?.forEach((v) => {
+      if (v.sizeCm && v.images?.[0]) {
+        map[v.sizeCm] = v.images[0];
+      }
+    });
+    return map;
+  }, [product]);
+
+  // ✅ Ảnh chính
+  const primaryImage = useMemo(() => {
+    if (!product) {
+      return "https://placehold.co/600x400?text=Pokemon";
+    }
+
+    const fallback =
+      product.thumbnail ||
+      product.images?.[0] ||
+      "https://placehold.co/600x400?text=Pokemon";
+
+    if (activeType === "thumbnail") return fallback;
+
+    const size = Number(activeType);
+    return sizeImageMap[size] || fallback;
+  }, [product, activeType, sizeImageMap]);
+
+  const price = selectedVariant?.price ?? product?.minPrice;
+  const originalPrice = selectedVariant?.originalPrice;
+  const stock = selectedVariant?.stock ?? product?.stockTotal;
+
+  // ✅ Click chọn size
+  const handleSelectVariant = (v) => {
+    setVariantId(v.variantId);
+    setActiveType(String(v.sizeCm));
+  };
+
+  // ✅ Click thumbnail
+  const handleClickThumb = (type) => {
+    setActiveType(type);
+
+    if (type !== "thumbnail" && product) {
+      const size = Number(type);
+      const v = product.variants?.find((x) => x.sizeCm === size);
+      if (v) setVariantId(v.variantId);
+    }
+  };
+
+  // ✅ Add to cart
   const handleAddToCart = async () => {
     if (!auth?.token) {
-      showToast("Vui lòng đăng nhập để thêm giỏ hàng", "error");
+      showToast("Vui lòng đăng nhập", "error");
       return;
     }
     if (!selectedVariant) {
@@ -78,13 +143,8 @@ export default function ProductDetail({ auth, logout }) {
         },
         body: JSON.stringify({
           productId: product._id,
-          quantity: 1,
           variantId: selectedVariant.variantId,
-          attributes: {
-            variantId: selectedVariant.variantId,
-            sizeCm: selectedVariant.sizeCm?.toString() || "",
-            sku: selectedVariant.sku || "",
-          },
+          quantity: 1,
         }),
       });
       if (!res.ok) throw new Error("Thêm giỏ thất bại");
@@ -94,99 +154,181 @@ export default function ProductDetail({ auth, logout }) {
     }
   };
 
-  const galleryImages = useMemo(() => {
-    const variantImages = selectedVariant?.images || [];
-    const baseImages = product?.images || [];
-    const thumb = product?.thumbnail ? [product.thumbnail] : [];
-    const all = [...variantImages, ...thumb, ...baseImages];
-    return all.filter((img, idx) => img && all.indexOf(img) === idx);
-  }, [product, selectedVariant]);
-
-  const primaryImage =
-    selectedImage ||
-    (selectedVariant?.images && selectedVariant.images[0]) ||
-    product?.thumbnail ||
-    (Array.isArray(product?.images) && product.images.length ? product.images[0] : null) ||
-    "https://placehold.co/600x400?text=Pokemon";
-
-  const price = selectedVariant?.price ?? product?.minPrice;
-  const originalPrice = selectedVariant?.originalPrice;
-  const stock = selectedVariant?.stock ?? product?.stockTotal;
-
   return (
     <div className="page">
       <Header auth={auth} logout={logout} />
       {toast && <div className={`toast ${toast.type}`}>{toast.text}</div>}
+
       <section className="section">
-        {loading && <div className="alert-box">Đang tải sản phẩm...</div>}
+        {loading && !product && (
+          <div className="alert-box">Đang tải sản phẩm...</div>
+        )}
         {error && <div className="alert-box">Lỗi: {error}</div>}
+
         {product && (
-          <div className="hero-card" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div
+            className="hero-card"
+            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}
+          >
+            {/* Ảnh */}
             <div>
-              <img src={primaryImage} alt={product.name} style={{ width: "100%", borderRadius: 16 }} />
-              {galleryImages.length > 1 && (
-                <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                  {galleryImages.map((img) => (
-                    <button
-                      key={img}
-                      type="button"
-                      onClick={() => setSelectedImage(img)}
-                      className={`ghost-btn ${selectedImage === img ? "active" : ""}`}
-                      style={{
-                        padding: 0,
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        border: selectedImage === img ? "2px solid var(--primary)" : "1px solid var(--border)",
-                      }}
-                    >
-                      <img src={img} alt="thumb" style={{ width: 70, height: 70, objectFit: "cover" }} />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <img
+                src={primaryImage}
+                alt={product.name}
+                style={{ width: "100%", borderRadius: 16 }}
+              />
+
+              {/* Thumbnail cố định 4 ảnh */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Main thumbnail */}
+                {product.thumbnail && (
+                  <button
+                    onClick={() => handleClickThumb("thumbnail")}
+                    style={{
+                      border:
+                        activeType === "thumbnail"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <img
+                      src={product.thumbnail}
+                      alt="thumb"
+                      style={{ width: 70, height: 70 }}
+                    />
+                  </button>
+                )}
+
+                {/* Size 3 */}
+                {sizeImageMap[3] && (
+                  <button
+                    onClick={() => handleClickThumb("3")}
+                    style={{
+                      border:
+                        activeType === "3"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <img
+                      src={sizeImageMap[3]}
+                      alt="3cm"
+                      style={{ width: 70, height: 70 }}
+                    />
+                  </button>
+                )}
+
+                {/* Size 5 */}
+                {sizeImageMap[5] && (
+                  <button
+                    onClick={() => handleClickThumb("5")}
+                    style={{
+                      border:
+                        activeType === "5"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <img
+                      src={sizeImageMap[5]}
+                      alt="5cm"
+                      style={{ width: 70, height: 70 }}
+                    />
+                  </button>
+                )}
+
+                {/* Size 10 */}
+                {sizeImageMap[10] && (
+                  <button
+                    onClick={() => handleClickThumb("10")}
+                    style={{
+                      border:
+                        activeType === "10"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <img
+                      src={sizeImageMap[10]}
+                      alt="10cm"
+                      style={{ width: 70, height: 70 }}
+                    />
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Info */}
             <div>
               <div className="chip">{product.category}</div>
-              <h2 className="section-title" style={{ margin: "8px 0" }}>
-                {product.name}
-              </h2>
+              <h2 className="section-title">{product.name}</h2>
               <p className="muted">{product.description}</p>
 
+              {/* Chọn size */}
               {product.variants?.length > 0 && (
                 <div style={{ margin: "12px 0" }}>
-                  <div className="muted" style={{ marginBottom: 8 }}>Chọn kích thước</div>
-                  <div className="hero-actions" style={{ gap: 8, flexWrap: "wrap" }}>
+                  <div className="muted">Chọn kích thước</div>
+                  <div
+                    className="hero-actions"
+                    style={{ gap: 8, flexWrap: "wrap" }}
+                  >
                     {product.variants.map((v) => (
                       <button
                         key={v.variantId}
-                        type="button"
-                        className={`filter-chip ${selectedVariant?.variantId === v.variantId ? "active" : ""}`}
-                        onClick={() => setVariantId(v.variantId)}
+                        className={`filter-chip ${
+                          selectedVariant?.variantId === v.variantId
+                            ? "active"
+                            : ""
+                        }`}
+                        onClick={() => handleSelectVariant(v)}
                       >
-                        {v.sizeCm ? `${v.sizeCm} cm` : v.variantId}
+                        {v.sizeCm} cm
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* Giá */}
               <div className="h4" style={{ color: "#d53f3f" }}>
                 {formatPrice(price)}
-                {originalPrice && originalPrice > price ? (
-                  <span className="muted" style={{ marginLeft: 8, textDecoration: "line-through", fontSize: 16 }}>
+                {originalPrice && originalPrice > price && (
+                  <span
+                    className="muted"
+                    style={{
+                      marginLeft: 8,
+                      textDecoration: "line-through",
+                      fontSize: 16,
+                    }}
+                  >
                     {formatPrice(originalPrice)}
                   </span>
-                ) : null}
+                )}
               </div>
 
-              <div className="muted">Tồn kho: {typeof stock === "number" ? stock : "N/A"}</div>
-              {selectedVariant?.sku && <div className="muted">SKU: {selectedVariant.sku}</div>}
+              {/* Tồn kho */}
+              <div className="muted">Tồn kho: {stock ?? "N/A"}</div>
 
+              {/* Actions */}
               <div className="hero-actions" style={{ marginTop: 16 }}>
                 <button className="cta-btn" onClick={handleAddToCart}>
                   Thêm giỏ
                 </button>
-                <button className="secondary-btn" onClick={() => navigate(-1)}>
+                <button
+                  className="secondary-btn"
+                  onClick={() => navigate(-1)}
+                >
                   Quay lại
                 </button>
               </div>
@@ -194,6 +336,7 @@ export default function ProductDetail({ auth, logout }) {
           </div>
         )}
       </section>
+
       <Footer />
     </div>
   );

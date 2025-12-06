@@ -16,6 +16,7 @@ const Header = ({ auth, logout }) => {
   const activeClass = (cond) => (cond ? "active" : "");
   const isCartPage = pathname.startsWith("/cart") || pathname.startsWith("/checkout");
   const isOrdersPage = pathname.startsWith("/orders");
+  const isAdminPage = pathname.startsWith("/admin");
 
   useEffect(() => {
     if (!isHome) return;
@@ -43,8 +44,8 @@ const Header = ({ auth, logout }) => {
     <>
       <div className="topbar">
         <div className="container topbar-inner">
-          <span>Hotline: 1900 0099 | Zalo/Facebook: nShop PokAcmon</span>
-          <span>Freeship đơn từ 499k · Nhận in theo file bạn gửi</span>
+          <span>Hotline: 1900 0099 | Zalo/Facebook: nShop Pokemon</span>
+          <span>Freeship đơn từ 499k • Nhận in theo file bạn gửi</span>
           <div className="topbar-auth">
             {auth?.user ? (
               <>
@@ -100,6 +101,11 @@ const Header = ({ auth, logout }) => {
             {auth?.token && (
               <Link className={`nav-link ${activeClass(isOrdersPage)}`} to="/orders">
                 Lịch sử đơn
+              </Link>
+            )}
+            {auth?.user?.role === "admin" && (
+              <Link className={`nav-link ${activeClass(isAdminPage)}`} to="/admin">
+                Admin
               </Link>
             )}
           </div>
