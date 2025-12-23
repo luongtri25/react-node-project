@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import Header from "../components/Header";
@@ -9,9 +9,11 @@ export default function AuthPage({ auth, setAuth }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Nếu đã đăng nhập, điều hướng đúng theo role
+  // If already logged in, redirect by role
   useEffect(() => {
     if (!auth?.user) return;
     if (auth.user.role === "admin") navigate("/admin");
@@ -41,12 +43,11 @@ export default function AuthPage({ auth, setAuth }) {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || data.message || "Xác thực thất bại");
+      if (!res.ok) throw new Error(data.error || data.message || "Auth failed");
 
       setAuth({ token: data.token, user: data.user });
       setMessage(mode === "login" ? "Đăng nhập thành công" : "Đăng ký thành công");
 
-      // điều hướng theo role
       if (mode === "login" && data?.user?.role === "admin") {
         navigate("/admin");
       } else {
@@ -58,6 +59,67 @@ export default function AuthPage({ auth, setAuth }) {
       setLoading(false);
     }
   };
+
+  // Load Google Identity Services script
+  useEffect(() => {
+    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existing) {
+      if (window.google) setGoogleReady(true);
+      else existing.onload = () => setGoogleReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGoogleReady(true);
+    document.body.appendChild(script);
+  }, []);
+
+  const handleGoogleResponse = useCallback(
+    async (response) => {
+      setMessage(null);
+      setGoogleLoading(true);
+      try {
+        const res = await fetch("http://localhost:5000/api/auth/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken: response.credential }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || data.message || "Google login failed");
+
+        setAuth({ token: data.token, user: data.user });
+        if (data?.user?.role === "admin") navigate("/admin");
+        else navigate("/");
+      } catch (err) {
+        setMessage(err.message || "Có lỗi xảy ra");
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    [navigate, setAuth]
+  );
+
+  // Initialize and render Google button when script + env ready
+  useEffect(() => {
+    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    if (!googleReady || !window.google || !clientId) return;
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleResponse,
+    });
+    const btn = document.getElementById("google-btn");
+    if (btn) {
+      btn.innerHTML = "";
+      window.google.accounts.id.renderButton(btn, {
+        theme: "outline",
+        size: "large",
+        width: "100%",
+      });
+    }
+  }, [googleReady, handleGoogleResponse]);
 
   return (
     <div className="page">
@@ -129,6 +191,20 @@ export default function AuthPage({ auth, setAuth }) {
               ? "Đăng nhập"
               : "Đăng ký"}
           </button>
+
+          <div style={{ marginTop: 12 }}>
+            <div id="google-btn" style={{ display: "flex", justifyContent: "center" }} />
+            {!process.env.REACT_APP_GOOGLE_CLIENT_ID && (
+              <div className="alert-box" style={{ marginTop: 8 }}>
+                Chưa cấu hình REACT_APP_GOOGLE_CLIENT_ID
+              </div>
+            )}
+            {googleLoading && (
+              <div className="muted" style={{ marginTop: 6 }}>
+                Đang đăng nhập Google...
+              </div>
+            )}
+          </div>
 
           {auth?.user && (
             <div className="alert-box" style={{ marginTop: 8 }}>

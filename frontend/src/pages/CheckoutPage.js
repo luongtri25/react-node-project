@@ -54,7 +54,7 @@ export default function CheckoutPage({ auth, logout }) {
     };
   }, [auth, navigate]);
 
-  const items = cart.items || [];
+  const items = useMemo(() => cart.items || [], [cart.items]);
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => {
       const price = item.price || item.product?.price || item.product?.minPrice || 0;

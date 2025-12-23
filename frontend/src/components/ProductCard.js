@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const currency = (v) =>
@@ -88,3 +88,4 @@ const ProductCard = ({ product, onAddToCart }) => {
 };
 
 export default ProductCard;
+

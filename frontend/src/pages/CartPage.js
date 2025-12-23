@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -58,28 +58,31 @@ export default function CartPage({ auth, logout }) {
   const currency = (value) =>
     new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value || 0);
 
-  const getVariantFromItem = (item) => {
+  const getVariantFromItem = useCallback((item) => {
     const attr = item.attributes || {};
     const variantId = attr.variantId || attr.get?.("variantId") || null;
     const variants = item.product?.variants || [];
     if (variantId) return variants.find((v) => v.variantId === variantId) || variants[0];
     return variants[0];
-  };
+  }, []);
 
-  const getLinePrice = (item) => {
-    const variant = getVariantFromItem(item);
-    if (typeof item.price === "number") return item.price;
-    if (variant?.price) return variant.price;
-    if (typeof item.product?.minPrice === "number") return item.product.minPrice;
-    return item.product?.price || 0;
-  };
+  const getLinePrice = useCallback(
+    (item) => {
+      const variant = getVariantFromItem(item);
+      if (typeof item.price === "number") return item.price;
+      if (variant?.price) return variant.price;
+      if (typeof item.product?.minPrice === "number") return item.product.minPrice;
+      return item.product?.price || 0;
+    },
+    [getVariantFromItem]
+  );
 
   const subtotal = useMemo(() => {
     return (cart.items || []).reduce((sum, item) => {
       const price = getLinePrice(item);
       return sum + price * (item.quantity || 1);
     }, 0);
-  }, [cart.items]);
+  }, [cart.items, getLinePrice]);
 
   const updateQuantity = async (productId, quantity, variantId) => {
     if (!token) return;
@@ -264,3 +267,4 @@ export default function CartPage({ auth, logout }) {
     </div>
   );
 }
+

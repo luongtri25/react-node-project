@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const CartItemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  name: String,           // snapshot name/price to prevent later change issues
+  name: String, // snapshot name/price to prevent later change issues
   price: Number,
   quantity: { type: Number, default: 1, min: 1 },
   image: String,

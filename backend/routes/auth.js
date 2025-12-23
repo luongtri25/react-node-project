@@ -2,10 +2,12 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/user');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register
 router.post('/register', async (req, res) => {
@@ -55,6 +57,68 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Login with Google (idToken from frontend)
+router.post('/google', async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken) return res.status(400).json({ error: 'Missing idToken' });
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.status(500).json({ error: 'GOOGLE_CLIENT_ID not configured' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+    const googleId = payload?.sub;
+    if (!email) return res.status(400).json({ error: 'Email not found from Google' });
+
+    const name = payload?.name || email.split('@')[0];
+    const avatar = payload?.picture;
+
+    let user = await User.findOne({ email });
+    if (!user) {
+      const randomPass = Math.random().toString(36).slice(-12);
+      const hashed = await bcrypt.hash(randomPass, 10);
+      user = await User.create({
+        name,
+        email,
+        password: hashed,
+        role: 'user',
+        googleId,
+        avatar,
+        provider: 'google'
+      });
+    } else {
+      // attach googleId/avatar if missing
+      const update = {};
+      if (!user.googleId && googleId) update.googleId = googleId;
+      if (!user.avatar && avatar) update.avatar = avatar;
+      if (!user.provider) update.provider = 'google';
+      if (Object.keys(update).length) {
+        Object.assign(user, update);
+        await user.save();
+      }
+    }
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.json({
+      token,
+      user: { _id: user._id, email: user.email, role: user.role, name: user.name, avatar: user.avatar }
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    return res.status(401).json({ error: 'Google token invalid' });
   }
 });
 

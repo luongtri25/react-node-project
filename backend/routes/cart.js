@@ -7,15 +7,17 @@ const adminOnly = require('../middleware/admin');
 
 const router = express.Router();
 
-// Lấy cart của user
+// Lấy cart của user hiện tại
 router.get('/', auth, async (req, res, next) => {
   try {
     const cart = await Cart.findOne({ user: req.userId }).populate('items.product', 'name price images');
     return res.json(cart || { user: req.userId, items: [] });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Lấy tất cả cart (admin)
+// Lấy toàn bộ cart (admin)
 router.get('/all', auth, adminOnly, async (req, res, next) => {
   try {
     const carts = await Cart.find()
@@ -24,10 +26,12 @@ router.get('/all', auth, adminOnly, async (req, res, next) => {
       .sort({ updatedAt: -1 })
       .limit(200);
     return res.json(carts);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
-// Thêm/cập nhật item
+// Thêm hoặc cập nhật item
 router.post(
   '/',
   auth,
@@ -97,7 +101,9 @@ router.post(
       }
       await cart.save();
       return res.json(cart);
-    } catch (err) { next(err); }
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
@@ -114,7 +120,9 @@ router.delete('/:productId', auth, [param('productId').isMongoId()], async (req,
     cart.items = cart.items.filter((i) => i.product.toString() !== productId);
     await cart.save();
     return res.json(cart);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

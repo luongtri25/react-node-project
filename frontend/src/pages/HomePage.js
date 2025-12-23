@@ -1,4 +1,4 @@
-﻿// src/pages/HomePage.js
+// src/pages/HomePage.js
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import "../App.css";
@@ -19,8 +19,6 @@ function HomePage({ auth, logout }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all");
-  const [form, setForm] = useState({ name: "", phone: "", product: "", note: "" });
-  const [submitStatus, setSubmitStatus] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (text, type = "info") => {
@@ -61,8 +59,6 @@ function HomePage({ auth, logout }) {
         ...(auth?.token ? { Authorization: `Bearer ${auth.token}` } : {}),
       },
     });
-
-  const handleSubmit = () => {};
 
   const handleAddToCart = async (product) => {
     if (!auth?.token) {
@@ -310,3 +306,4 @@ function HomePage({ auth, logout }) {
 }
 
 export default HomePage;
+
