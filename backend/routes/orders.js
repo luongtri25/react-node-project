@@ -4,6 +4,8 @@ const { body, param, validationResult } = require('express-validator');
 const Order = require('../models/order');
 const Product = require('../models/product');
 const Cart = require('../models/cart');
+const User = require('../models/user');
+const { sendOrderStatusEmail } = require('../services/mailer');
 const auth = require('../middleware/auth');
 const adminOnly = require('../middleware/admin');
 
@@ -156,6 +158,22 @@ router.patch(
       );
 
       if (!order) return res.status(404).json({ error: 'Order not found' });
+
+      // Send notification email (best effort)
+      try {
+        const user = await User.findById(order.user).select('email name');
+        if (user?.email) {
+          await sendOrderStatusEmail({
+            to: user.email,
+            name: user.name,
+            orderId: order._id.toString(),
+            status
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to send order status email:', err.message);
+      }
+
       return res.json(order);
     } catch (err) {
       next(err);

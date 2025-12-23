@@ -17,6 +17,7 @@ const Header = ({ auth, logout }) => {
   const isCartPage = pathname.startsWith("/cart") || pathname.startsWith("/checkout");
   const isOrdersPage = pathname.startsWith("/orders");
   const isAdminPage = pathname.startsWith("/admin");
+  const isProfilePage = pathname.startsWith("/profile");
 
   useEffect(() => {
     if (!isHome) return;
@@ -45,11 +46,18 @@ const Header = ({ auth, logout }) => {
       <div className="topbar">
         <div className="container topbar-inner">
           <span>Hotline: 1900 0099 | Zalo/Facebook: nShop Pokemon</span>
-          <span>Freeship đơn từ 499k • Nhận in theo file bạn gửi</span>
+          <span>Freeship đơn từ 499k — Nhận in theo file bạn gửi</span>
           <div className="topbar-auth">
             {auth?.user ? (
               <>
-                <span className="user-email">{auth.user.email}</span>
+                <button
+                  className="btn btn-sm btn-outline-light"
+                  style={{ marginRight: 8 }}
+                  onClick={() => navigate("/profile")}
+                  title="Thông tin cá nhân"
+                >
+                  {auth.user.name || auth.user.email}
+                </button>
                 <button className="btn btn-sm btn-outline-light" onClick={handleLogout}>
                   Đăng xuất
                 </button>
